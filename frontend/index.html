@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CoverBuild RL — AI-Powered cover letter generator with RLHF feedback loop. Generate professional cover letters scored by a trained reward model." />
+  <title>CoverBuild RL — AI Cover Letter Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ─── Background ─────────────────────────────────────────── -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- ─── Header ────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">CoverBuild <span class="logo-rl">RL</span></span>
+      </div>
+      <nav class="nav">
+        <a href="#generator" class="nav-link">Generator</a>
+        <a href="#metrics" class="nav-link">Metrics</a>
+        <a href="#pipeline" class="nav-link">Pipeline</a>
+        <div id="status-dot" class="status-dot offline" title="API Status"></div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ─── Hero ──────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-badge">RLHF-Powered Generation</div>
+    <h1 class="hero-title">
+      Cover Letters Trained by<br/>
+      <span class="gradient-text">Reinforcement Learning</span>
+    </h1>
+    <p class="hero-subtitle">
+      GPT-2 policy model fine-tuned with PPO + a reward model — RLHF in miniature.
+      Every letter scored by a trained preference model.
+    </p>
+    <div class="hero-chips">
+      <span class="chip">🤖 GPT-2 Policy</span>
+      <span class="chip">🏆 Reward Model</span>
+      <span class="chip">🔄 PPO Loop</span>
+      <span class="chip">📊 MLflow Tracking</span>
+    </div>
+  </section>
+
+  <!-- ─── Generator ─────────────────────────────────────────── -->
+  <section id="generator" class="section">
+    <div class="container">
+      <div class="generator-grid">
+
+        <!-- Left: Inputs -->
+        <div class="card input-card">
+          <div class="card-header">
+            <span class="card-icon">📋</span>
+            <h2 class="card-title">Inputs</h2>
+          </div>
+
+          <div class="form-group">
+            <label class="label" for="job-description">Job Description</label>
+            <textarea
+              id="job-description"
+              class="textarea"
+              rows="6"
+              placeholder="e.g. Software Engineer at a fintech startup. Requirements: Python, REST APIs, SQL, team collaboration..."
+            ></textarea>
+            <div class="char-count" id="job-char-count">0 / 2000</div>
+          </div>
+
+          <div class="form-group">
+            <label class="label" for="applicant-profile">Applicant Profile</label>
+            <textarea
+              id="applicant-profile"
+              class="textarea"
+              rows="4"
+              placeholder="e.g. 3 years Python experience, built REST APIs, B.Sc. Computer Science, GitHub portfolio..."
+            ></textarea>
+            <div class="char-count" id="profile-char-count">0 / 1000</div>
+          </div>
+
+          <div class="controls-row">
+            <div class="control-group">
+              <label class="label-sm" for="temperature">Temperature</label>
+              <input type="range" id="temperature" min="0.1" max="2.0" step="0.1" value="0.9" class="slider" />
+              <span class="slider-val" id="temp-val">0.9</span>
+            </div>
+            <div class="control-group">
+              <label class="label-sm" for="max-length">Max Tokens</label>
+              <input type="range" id="max-length" min="50" max="512" step="10" value="256" class="slider" />
+              <span class="slider-val" id="len-val">256</span>
+            </div>
+          </div>
+
+          <button id="generate-btn" class="btn-primary" onclick="generateLetter()">
+            <span class="btn-icon">✨</span>
+            Generate Cover Letter
+          </button>
+
+          <button id="sample-btn" class="btn-secondary" onclick="loadSample()">
+            Load Sample Inputs
+          </button>
+        </div>
+
+        <!-- Right: Output -->
+        <div class="card output-card">
+          <div class="card-header">
+            <span class="card-icon">📝</span>
+            <h2 class="card-title">Generated Cover Letter</h2>
+            <button id="copy-btn" class="btn-icon-only" onclick="copyLetter()" title="Copy to clipboard" style="display:none">📋</button>
+          </div>
+
+          <!-- Empty state -->
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon">🤖</div>
+            <p>Fill in the inputs and click <strong>Generate</strong> to produce an AI-written cover letter using the RLHF-trained policy model.</p>
+          </div>
+
+          <!-- Loading state -->
+          <div id="loading-state" class="loading-state" style="display:none">
+            <div class="spinner"></div>
+            <p class="loading-text">Generating with policy model<span class="dots"></span></p>
+            <div class="loading-steps">
+              <div class="step active" id="step-1">Tokenising prompt</div>
+              <div class="step" id="step-2">Running policy model</div>
+              <div class="step" id="step-3">Scoring with reward model</div>
+            </div>
+          </div>
+
+          <!-- Output text -->
+          <div id="output-text" class="output-text" style="display:none"></div>
+
+          <!-- Score panel -->
+          <div id="score-panel" class="score-panel" style="display:none">
+            <div class="score-header">
+              <span class="score-label">Reward Score</span>
+              <span id="score-badge" class="score-badge"></span>
+            </div>
+            <div class="score-bars">
+              <div class="score-bar-row">
+                <span class="dim-label">Structure</span>
+                <div class="bar-track"><div class="bar-fill" id="bar-structure"></div></div>
+                <span class="dim-val" id="val-structure"></span>
+              </div>
+              <div class="score-bar-row">
+                <span class="dim-label">Relevance</span>
+                <div class="bar-track"><div class="bar-fill" id="bar-relevance"></div></div>
+                <span class="dim-val" id="val-relevance"></span>
+              </div>
+              <div class="score-bar-row">
+                <span class="dim-label">Tone</span>
+                <div class="bar-track"><div class="bar-fill" id="bar-tone"></div></div>
+                <span class="dim-val" id="val-tone"></span>
+              </div>
+              <div class="score-bar-row">
+                <span class="dim-label">Conciseness</span>
+                <div class="bar-track"><div class="bar-fill" id="bar-conciseness"></div></div>
+                <span class="dim-val" id="val-conciseness"></span>
+              </div>
+            </div>
+            <div class="meta-row">
+              <span class="meta-item" id="meta-time">⏱ — ms</span>
+              <span class="meta-item" id="meta-tokens">🔢 — tokens</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Score a Letter ────────────────────────────────────── -->
+  <section id="scorer" class="section section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Score Your Own Letter</h2>
+        <p class="section-desc">Paste any cover letter and get a multi-dimensional score from the reward model.</p>
+      </div>
+      <div class="scorer-grid">
+        <div class="card">
+          <div class="form-group">
+            <label class="label" for="score-job">Job Description</label>
+            <textarea id="score-job" class="textarea" rows="3" placeholder="Job description context..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="label" for="score-letter">Your Cover Letter</label>
+            <textarea id="score-letter" class="textarea" rows="8" placeholder="Paste your cover letter here..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="scoreLetter()">
+            <span class="btn-icon">📊</span> Score It
+          </button>
+        </div>
+        <div class="card" id="score-result-card">
+          <div id="score-empty" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>Your score breakdown will appear here.</p>
+          </div>
+          <div id="score-result" style="display:none">
+            <div class="big-score-display">
+              <div class="big-score-label">Reward Score</div>
+              <div class="big-score-number" id="big-score-number">—</div>
+              <div class="big-score-interp" id="big-score-interp"></div>
+            </div>
+            <div class="score-bars" id="scorer-bars"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── RL Pipeline diagram ───────────────────────────────── -->
+  <section id="pipeline" class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">RLHF Pipeline</h2>
+        <p class="section-desc">Three-phase training pipeline — SFT → Reward → PPO.</p>
+      </div>
+      <div class="pipeline-steps">
+        <div class="pipe-step">
+          <div class="pipe-icon">📦</div>
+          <div class="pipe-num">Phase 1</div>
+          <h3 class="pipe-title">SFT Fine-Tuning</h3>
+          <p class="pipe-desc">GPT-2 fine-tuned on cover letter corpus with LoRA for memory efficiency.</p>
+          <code class="pipe-cmd">python scripts/train_sft.py</code>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🏆</div>
+          <div class="pipe-num">Phase 2</div>
+          <h3 class="pipe-title">Reward Model</h3>
+          <p class="pipe-desc">DistilBERT trained on pairwise preference data with margin ranking loss.</p>
+          <code class="pipe-cmd">python scripts/train_reward.py</code>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🔄</div>
+          <div class="pipe-num">Phase 3</div>
+          <h3 class="pipe-title">PPO RLHF Loop</h3>
+          <p class="pipe-desc">Policy optimised with PPO + KL penalty. Reward model scores each rollout.</p>
+          <code class="pipe-cmd">python scripts/train_ppo.py</code>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🌐</div>
+          <div class="pipe-num">Serve</div>
+          <h3 class="pipe-title">REST API</h3>
+          <p class="pipe-desc">FastAPI server with /generate and /reward endpoints. MLflow model registry.</p>
+          <code class="pipe-cmd">python scripts/serve.py</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Metrics Panel ─────────────────────────────────────── -->
+  <section id="metrics" class="section section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Training Metrics</h2>
+        <p class="section-desc">Live model info pulled from the API.</p>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card" id="metric-device">
+          <div class="metric-icon">⚡</div>
+          <div class="metric-label">Device</div>
+          <div class="metric-val" id="val-device">—</div>
+        </div>
+        <div class="metric-card" id="metric-model">
+          <div class="metric-icon">🤖</div>
+          <div class="metric-label">Model</div>
+          <div class="metric-val" id="val-model">—</div>
+        </div>
+        <div class="metric-card" id="metric-vocab">
+          <div class="metric-icon">📚</div>
+          <div class="metric-label">Vocab Size</div>
+          <div class="metric-val" id="val-vocab">—</div>
+        </div>
+        <div class="metric-card" id="metric-status">
+          <div class="metric-icon">✅</div>
+          <div class="metric-label">API Status</div>
+          <div class="metric-val" id="val-status">Checking...</div>
+        </div>
+      </div>
+      <div class="mlflow-hint">
+        <span class="hint-icon">📈</span>
+        View full training curves: run <code>mlflow ui --port 5000</code> and open
+        <a href="http://localhost:5000" target="_blank">localhost:5000</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Footer ────────────────────────────────────────────── -->
+  <footer class="footer">
+    <p>CoverBuild RL · RLHF in Miniature · Built with PyTorch, TRL, HuggingFace, FastAPI</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

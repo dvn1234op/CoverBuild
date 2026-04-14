@@ -1,0 +1,26 @@
+# Reward Model Training Config
+base_model: "distilbert-base-uncased"
+preference_data_path: "data/preferences/prefs.jsonl"
+output_dir: "./models/reward"
+mlflow_experiment: "coverbuild-reward"
+
+# Training
+num_train_epochs: 3
+per_device_train_batch_size: 8
+learning_rate: 2.0e-5
+warmup_ratio: 0.1
+weight_decay: 0.01
+max_length: 512
+fp16: true
+
+# Reward model architecture
+num_labels: 1
+problem_type: "regression"
+
+# Scoring dimensions
+use_multi_dim: true
+score_dims:
+  - structure   # Does it follow cover letter format?
+  - relevance   # Job-description keyword match
+  - tone        # Professionalism of language
+  - conciseness # Appropriate length

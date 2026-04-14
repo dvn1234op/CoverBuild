@@ -1,0 +1,36 @@
+# PPO Training Config (RLHF Phase)
+base_model: "google/gemma-3-1b-it"   # Gemma 3 1B instruction-tuned
+sft_model_path: "./models/sft"
+reward_model_path: "./models/reward"
+output_dir: "./models/ppo"
+mlflow_experiment: "coverbuild-ppo"
+
+# PPO Hyperparameters
+learning_rate: 1.4e-5
+batch_size: 4
+mini_batch_size: 2
+gradient_accumulation_steps: 1
+ppo_epochs: 4
+total_steps: 500
+
+# KL Penalty (keeps policy close to reference SFT model)
+kl_penalty: "kl"
+init_kl_coef: 0.2
+adap_kl_ctrl: true
+target_kl: 6.0
+
+# Generation
+max_new_tokens: 256
+temperature: 0.9
+top_k: 50
+top_p: 0.95
+repetition_penalty: 1.3      # critical for GPT-2 — prevents repetition loops
+no_repeat_ngram_size: 4      # blocks repeated 4-grams
+
+# Advantage estimation
+gamma: 1.0
+lam: 0.95
+
+# Logging
+log_every_n_steps: 10
+save_every_n_steps: 100

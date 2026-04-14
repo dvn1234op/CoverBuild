@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environments
+.env
+.venv
+venv/
+
+# Models (large files — use git-lfs or exclude)
+models/
+data/processed/
+data/preferences/
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Pytest
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Training overrides
+configs/_*

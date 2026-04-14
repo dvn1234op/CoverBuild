@@ -1,0 +1,29 @@
+# SFT Training Config
+model_name: "google/gemma-3-1b-it"   # Gemma 3 1B instruction-tuned — best lightweight instruction model
+dataset_path: "data/processed/cover_letters.jsonl"
+output_dir: "./models/sft"
+mlflow_experiment: "coverbuild-sft"
+
+# Training
+num_train_epochs: 3
+per_device_train_batch_size: 2        # Gemma is larger than GPT-2 — lower batch to fit VRAM
+per_device_eval_batch_size: 2
+gradient_accumulation_steps: 4        # effective batch = 8
+learning_rate: 2.0e-5
+warmup_steps: 50
+weight_decay: 0.01
+max_seq_length: 1024
+fp16: false                           # Gemma uses bfloat16 — set bf16: true instead
+bf16: true
+save_steps: 100
+logging_steps: 10
+eval_steps: 50
+load_best_model_at_end: true
+metric_for_best_model: "eval_loss"
+
+# LoRA (Gemma uses standard attention projection names)
+use_lora: true
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.1
+lora_target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
